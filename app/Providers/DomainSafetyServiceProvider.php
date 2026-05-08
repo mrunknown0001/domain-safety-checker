@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Services\DomainSafetyService;
 use App\Services\GoogleSafeBrowsingService;
 use App\Services\MainAppClient;
+use App\Services\TelegramNotifier;
 use App\Services\UrlhausService;
 use App\Services\VirusTotalService;
 use Illuminate\Contracts\Foundation\Application;
@@ -59,6 +60,19 @@ final class DomainSafetyServiceProvider extends ServiceProvider
             );
         });
 
+        $this->app->singleton(TelegramNotifier::class, function (Application $app): TelegramNotifier {
+            $cfg = $app['config']->get('domain-safety.telegram', []);
+
+            return new TelegramNotifier(
+                enabled: (bool) ($cfg['enabled'] ?? false),
+                botToken: $cfg['bot_token'] ?? null,
+                chatId: $cfg['chat_id'] ?? null,
+                dedupTtl: (int) ($cfg['dedup_ttl'] ?? 86400),
+                timeout: (int) ($cfg['timeout'] ?? 8),
+                cachePrefix: (string) ($cfg['cache_prefix'] ?? 'telegram_notified:'),
+            );
+        });
+
         $this->app->singleton(MainAppClient::class, function (Application $app): MainAppClient {
             $cfg = $app['config']->get('domain-safety.main_app', []);
 
@@ -80,6 +94,7 @@ final class DomainSafetyServiceProvider extends ServiceProvider
                 virusTotal: $app->make(VirusTotalService::class),
                 googleSafeBrowsing: $app->make(GoogleSafeBrowsingService::class),
                 urlhaus: $app->make(UrlhausService::class),
+                telegram: $app->make(TelegramNotifier::class),
                 cacheEnabled: (bool) ($cache['enabled'] ?? true),
                 cacheTtl: (int) ($cache['ttl'] ?? 3600),
                 cachePrefix: (string) ($cache['prefix'] ?? 'domain_safety:'),

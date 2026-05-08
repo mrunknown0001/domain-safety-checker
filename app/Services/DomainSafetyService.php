@@ -21,6 +21,7 @@ final class DomainSafetyService
         private readonly VirusTotalService $virusTotal,
         private readonly GoogleSafeBrowsingService $googleSafeBrowsing,
         private readonly UrlhausService $urlhaus,
+        private readonly TelegramNotifier $telegram,
         private readonly bool $cacheEnabled,
         private readonly int $cacheTtl,
         private readonly string $cachePrefix,
@@ -102,7 +103,13 @@ final class DomainSafetyService
             $this->urlhaus->check($domain),
         ];
 
-        return $this->buildPayload($domain, $results, $original);
+        $payload = $this->buildPayload($domain, $results, $original);
+
+        // Fire Telegram alert on flagged verdicts. Only runs on cache miss,
+        // and the notifier itself dedupes within `TELEGRAM_DEDUP_TTL`.
+        $this->telegram->notifyFlagged($payload);
+
+        return $payload;
     }
 
     /**

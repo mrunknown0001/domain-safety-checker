@@ -98,6 +98,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Telegram notifications
+    |--------------------------------------------------------------------------
+    | Sends a message to the configured chat whenever a domain check produces
+    | a flagged (malicious/suspicious) verdict. Notifications are deduplicated
+    | per-domain via the cache, so the same flagged domain doesn't spam every
+    | time the result cache expires.
+    */
+    'telegram' => [
+        'enabled' => env('TELEGRAM_ENABLED', true),
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_CHAT_ID'),
+        'timeout' => (int) env('TELEGRAM_TIMEOUT', 8),
+        // Suppress duplicate notifications for the same domain for this many
+        // seconds. 86400 = 24h. Set to 0 to disable dedup.
+        'dedup_ttl' => (int) env('TELEGRAM_DEDUP_TTL', 86400),
+        'cache_prefix' => env('TELEGRAM_DEDUP_PREFIX', 'telegram_notified:'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Main app integration (push webhook back with safety status)
     |--------------------------------------------------------------------------
     | The main app exposes:
