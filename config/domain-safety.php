@@ -87,6 +87,13 @@ return [
             'client_version' => env('GOOGLE_SAFE_BROWSING_CLIENT_VERSION', '1.0.0'),
         ],
 
+        'urlhaus' => [
+            'enabled' => env('URLHAUS_ENABLED', true),
+            'api_key' => env('URLHAUS_API_KEY'),
+            'base_url' => env('URLHAUS_BASE_URL', 'https://urlhaus-api.abuse.ch/v1'),
+            'timeout' => (int) env('URLHAUS_TIMEOUT', 10),
+        ],
+
     ],
 
     /*

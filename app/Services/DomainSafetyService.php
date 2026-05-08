@@ -20,6 +20,7 @@ final class DomainSafetyService
     public function __construct(
         private readonly VirusTotalService $virusTotal,
         private readonly GoogleSafeBrowsingService $googleSafeBrowsing,
+        private readonly UrlhausService $urlhaus,
         private readonly bool $cacheEnabled,
         private readonly int $cacheTtl,
         private readonly string $cachePrefix,
@@ -97,6 +98,8 @@ final class DomainSafetyService
             $this->virusTotal->check($domain),
             // GSB matches at URL granularity, so pass the original input.
             $this->googleSafeBrowsing->check($original),
+            // URLhaus does host-based lookup.
+            $this->urlhaus->check($domain),
         ];
 
         return $this->buildPayload($domain, $results, $original);
@@ -211,6 +214,20 @@ final class DomainSafetyService
             if ($r->provider === VirusTotalService::NAME) {
                 $totalFlags += (int) ($r->details['malicious'] ?? 0)
                     + (int) ($r->details['suspicious'] ?? 0);
+            }
+
+            if ($r->provider === UrlhausService::NAME && $r->flagged) {
+                $threats = (array) ($r->details['threats'] ?? []);
+                $tags = array_map('strtolower', (array) ($r->details['tags'] ?? []));
+                // URLhaus's primary threat label is "malware_download".
+                if (in_array('malware_download', $threats, true)) {
+                    $isMalware = true;
+                }
+                // Phishing tags hint at social-engineering campaigns.
+                if (in_array('phishing', $tags, true) || in_array('phish', $tags, true)) {
+                    $isPhishing = true;
+                }
+                $totalFlags += (int) ($r->details['url_count'] ?? 0);
             }
         }
 

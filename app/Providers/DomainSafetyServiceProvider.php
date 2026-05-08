@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Services\DomainSafetyService;
 use App\Services\GoogleSafeBrowsingService;
 use App\Services\MainAppClient;
+use App\Services\UrlhausService;
 use App\Services\VirusTotalService;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -47,6 +48,17 @@ final class DomainSafetyServiceProvider extends ServiceProvider
             );
         });
 
+        $this->app->singleton(UrlhausService::class, function (Application $app): UrlhausService {
+            $cfg = $app['config']->get('domain-safety.providers.urlhaus', []);
+
+            return new UrlhausService(
+                enabled: (bool) ($cfg['enabled'] ?? false),
+                apiKey: $cfg['api_key'] ?? null,
+                baseUrl: (string) ($cfg['base_url'] ?? 'https://urlhaus-api.abuse.ch/v1'),
+                timeout: (int) ($cfg['timeout'] ?? 10),
+            );
+        });
+
         $this->app->singleton(MainAppClient::class, function (Application $app): MainAppClient {
             $cfg = $app['config']->get('domain-safety.main_app', []);
 
@@ -67,6 +79,7 @@ final class DomainSafetyServiceProvider extends ServiceProvider
             return new DomainSafetyService(
                 virusTotal: $app->make(VirusTotalService::class),
                 googleSafeBrowsing: $app->make(GoogleSafeBrowsingService::class),
+                urlhaus: $app->make(UrlhausService::class),
                 cacheEnabled: (bool) ($cache['enabled'] ?? true),
                 cacheTtl: (int) ($cache['ttl'] ?? 3600),
                 cachePrefix: (string) ($cache['prefix'] ?? 'domain_safety:'),
