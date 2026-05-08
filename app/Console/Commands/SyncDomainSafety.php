@@ -14,7 +14,8 @@ final class SyncDomainSafety extends Command
 {
     protected $signature = 'domain-safety:sync
         {--dry-run : Run checks but do not POST webhooks}
-        {--domain= : Only check this single domain (skips fetching the list)}';
+        {--domain= : Only check this single domain (skips fetching the list)}
+        {--interval= : Override DOMAIN_SAFETY_SYNC_INTERVAL (seconds between cache-miss checks)}';
 
     protected $description = 'Pull domains from the main app, run safety checks, and POST verdicts to the webhook.';
 
@@ -44,15 +45,30 @@ final class SyncDomainSafety extends Command
         }
 
         $notifyOnUnknown = (bool) config('domain-safety.main_app.notify_on_unknown', false);
+        $intervalSeconds = $this->option('interval') !== null
+            ? max(0, (int) $this->option('interval'))
+            : (int) config('domain-safety.sync.interval_seconds', 15);
+
         $sent = 0;
         $skipped = 0;
         $failed = 0;
+        $lastWasCacheMiss = false;
 
-        foreach ($domains as $row) {
+        foreach ($domains as $i => $row) {
             $name = (string) ($row['domain_name'] ?? '');
             if ($name === '') {
                 continue;
             }
+
+            // Throttle BEFORE the next upstream call (not after the last one),
+            // and only when the previous iteration actually hit the providers.
+            if ($i > 0 && $lastWasCacheMiss && $intervalSeconds > 0) {
+                $this->line(sprintf('  …sleeping %ds (rate-limit throttle)', $intervalSeconds));
+                sleep($intervalSeconds);
+            }
+
+            $cached = $safety->isCached($name);
+            $lastWasCacheMiss = ! $cached;
 
             $result = $safety->check($name);
             $verdict = $result['verdict'];

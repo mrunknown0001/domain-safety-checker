@@ -56,6 +56,25 @@ final class DomainSafetyService
     }
 
     /**
+     * Peek whether the next call to check($input) would hit the cache or run
+     * the upstream providers. Useful for callers that need to throttle around
+     * cache misses (e.g. respecting VirusTotal's 4 req/min limit).
+     */
+    public function isCached(string $input): bool
+    {
+        if (! $this->cacheEnabled) {
+            return false;
+        }
+
+        $domain = $this->normalize($input);
+        if ($domain === '') {
+            return false;
+        }
+
+        return Cache::has($this->cachePrefix.$this->cacheToken($input));
+    }
+
+    /**
      * @param  string[]  $domains
      */
     public function checkBatch(array $domains): array

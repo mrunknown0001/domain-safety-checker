@@ -15,6 +15,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Sync command throttling
+    |--------------------------------------------------------------------------
+    | Seconds to sleep between consecutive upstream calls in
+    | `php artisan domain-safety:sync`. Sleeps only after a cache miss (cache
+    | hits don't burn the rate-limit budget). 15s caps us at 4 VT calls/min,
+    | matching VirusTotal's free-tier limit. Set 0 to disable.
+    */
+    'sync' => [
+        'interval_seconds' => (int) env('DOMAIN_SAFETY_SYNC_INTERVAL', 15),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Verdict thresholds
     |--------------------------------------------------------------------------
     | The minimum number of VirusTotal engines that must flag a domain before

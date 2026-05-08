@@ -204,10 +204,17 @@ Priority order for `threat_type`: GSB-specific label → URLhaus malware label �
 ### Running the sync
 
 ```bash
-docker compose exec laravel.test php artisan domain-safety:sync           # full sync
-docker compose exec laravel.test php artisan domain-safety:sync --dry-run  # don't POST, just log
-docker compose exec laravel.test php artisan domain-safety:sync --domain=foo.com  # one domain
+docker compose exec laravel.test php artisan domain-safety:sync               # full sync
+docker compose exec laravel.test php artisan domain-safety:sync --dry-run     # don't POST, just log
+docker compose exec laravel.test php artisan domain-safety:sync --domain=foo.com   # one domain
+docker compose exec laravel.test php artisan domain-safety:sync --interval=20      # override per-domain throttle
 ```
+
+### Rate-limit throttling
+
+VirusTotal's free tier caps you at **4 requests/min**. To stay under that, the sync command sleeps `DOMAIN_SAFETY_SYNC_INTERVAL` seconds (default **15**) between consecutive domain checks — but **only after a cache miss**. Cache hits skip the sleep entirely, so re-running sync over an already-cached set finishes in seconds.
+
+For a 100-domain list, expect a worst-case 100 × 15s = ~25 minutes when the cache is fully cold. Set `--interval=0` (or `DOMAIN_SAFETY_SYNC_INTERVAL=0`) to disable throttling if you have a paid VirusTotal plan.
 
 To run on a schedule, add to [routes/console.php](routes/console.php):
 
