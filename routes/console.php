@@ -14,7 +14,8 @@ Artisan::command('inspire', function () {
 // withoutOverlapping prevents a slow run from piling up if the main app is
 // briefly unreachable; runInBackground keeps the scheduler tick fast.
 Schedule::command('domain-safety:sync')
-    ->hourly()
+    // ->hourly()
+    ->everyFiveMinutes()
     ->withoutOverlapping(10)
     ->runInBackground()
     ->onOneServer()
